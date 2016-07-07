@@ -2,6 +2,7 @@ package com.tehasdf.discord
 
 import java.math.BigInteger
 
+import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -10,24 +11,24 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.actor.ActorSubscriber
-import akka.stream.{OverflowStrategy, ActorMaterializer}
-import akka.stream.scaladsl.{Keep, Flow, Sink, Source}
+import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import com.tehasdf.discord.Client.LoginFailure
 import com.tehasdf.discord.messages.MessageCreatePayload
-import com.tehasdf.discord.model.{Msg, LoginInfo}
+import com.tehasdf.discord.model.{LoginInfo, Msg}
 import spray.json._
 
-import scala.util.{Success, Failure, Try, Random}
+import scala.util.{Failure, Random, Success, Try}
 
 object Client {
   case class LoginFailure(resp: HttpResponse) extends Exception(resp.toString)
 }
 
-class Client(http: Flow[(HttpRequest, Int), (Try[HttpResponse], Int), Unit])(implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) {
+class Client(http: Flow[(HttpRequest, Int), (Try[HttpResponse], Int), NotUsed])(implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) {
   import codec.DiscordProtocol._
   import system.dispatcher
 
-  def this()(implicit s: ActorSystem, m: ActorMaterializer) = this(Http().superPool())
+  def this()(implicit s: ActorSystem, m: ActorMaterializer) = this(Http().superPool[Int]())
 
   def acquireToken(email: String, password: String) = {
     val body = HttpEntity(ContentTypes.`application/json`, LoginInfo(email, password).toJson.compactPrint)
@@ -53,11 +54,11 @@ class Client(http: Flow[(HttpRequest, Int), (Try[HttpResponse], Int), Unit])(imp
   }
 }
 
-class AuthenticatedClient(token: String, http: Flow[(HttpRequest, Int), (Try[HttpResponse], Int), Unit])(implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) {
+class AuthenticatedClient(token: String, http: Flow[(HttpRequest, Int), (Try[HttpResponse], Int), NotUsed])(implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) {
   import system.dispatcher
   import codec.DiscordProtocol._
 
-  def this(token: String)(implicit s: ActorSystem, m: ActorMaterializer) = this(token, Http().superPool())
+  def this(token: String)(implicit s: ActorSystem, m: ActorMaterializer) = this(token, Http().superPool[Int]())
 
   private val authHeader = RawHeader("Authorization", token)
 
@@ -101,10 +102,10 @@ class AuthenticatedClient(token: String, http: Flow[(HttpRequest, Int), (Try[Htt
 
   def wsConnect(uri: Uri, listener: ActorRef) = {
     val sourceQueue = Source.queue[Message](64, OverflowStrategy.fail)
-    val destPublisher = Sink.publisher[Message]
+    val destPublisher = Sink.asPublisher[Message](false)
 
     val flow = Flow.fromSinkAndSourceMat(destPublisher, sourceQueue)(Keep.both)
-    val (_, (dest, source)) = Http().singleWebsocketRequest(uri, flow)
+    val (_, (dest, source)) = Http().singleWebSocketRequest(uri, flow)
 
     val props = ClientActor.props(source, listener, token)
     val actor = system.actorOf(props)

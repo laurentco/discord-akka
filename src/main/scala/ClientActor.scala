@@ -6,8 +6,8 @@ import akka.actor.{ActorRef, Cancellable, FSM, Props}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.actor.{ActorSubscriber, OneByOneRequestStrategy}
-import akka.stream.scaladsl.Sink
-import akka.stream.{ActorMaterializer, SourceQueue}
+import akka.stream.scaladsl.{Sink,SourceQueue}
+import akka.stream.ActorMaterializer
 import codec.DiscordProtocol
 import com.tehasdf.discord.model._
 import com.tehasdf.discord.messages._

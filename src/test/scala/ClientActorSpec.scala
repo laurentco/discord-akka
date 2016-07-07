@@ -3,8 +3,8 @@ package com.tehasdf.discord
 import akka.actor.{ActorRef, Actor, ActorSystem}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.pattern.ask
-import akka.stream.scaladsl.{Keep, Sink, Source}
-import akka.stream.{SourceQueue, ActorMaterializer, OverflowStrategy}
+import akka.stream.scaladsl.{Keep, Sink, Source,SourceQueue}
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestKit
 import akka.util.Timeout
 import org.scalatest.concurrent.{IntegrationPatience, Eventually}
